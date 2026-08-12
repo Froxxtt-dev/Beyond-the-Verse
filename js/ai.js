@@ -97,15 +97,15 @@ function parseJsonLoose(text) {
 
 async function generateJson(systemPrompt, userPrompt, opts = {}) {
   const callOpts = { ...opts, jsonMode: true };
-  let raw = await groqChat(systemPrompt, userPrompt, callOpts);
   try {
+    const raw = await groqChat(systemPrompt, userPrompt, callOpts);
     return parseJsonLoose(raw);
   } catch (firstErr) {
     const retryPrompt = userPrompt + `
 
-Your previous response was not valid JSON (${firstErr.message}). Respond again with corrected valid JSON only. Critical: never use a double-quote character inside any string value — use single quotes for any quoted speech or dialogue instead.`;
-    raw = await groqChat(systemPrompt, retryPrompt, callOpts);
-    return parseJsonLoose(raw);
+Your previous attempt failed (${firstErr.message}). Try again with a simpler structure: keep every string value plain text with no nested quotation marks, no line breaks inside strings, and no double-quote characters inside any string value.`;
+    const raw2 = await groqChat(systemPrompt, retryPrompt, callOpts);
+    return parseJsonLoose(raw2);
   }
 }
 
@@ -119,9 +119,11 @@ const SECTION_PROMPTS = {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that explores Old Testament stories and happenings, not standard chapter-by-chapter reading. You write in an engaging, human, narrative-nonfiction style, similar to a well-researched storyteller. Be historically and textually grounded; note real scholarly or interpretive disputes briefly where relevant rather than presenting one view as settled. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct Old Testament stories or happenings (can be well-known or more obscure) suitable for a "story teaser" list. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
 Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter, e.g. "Genesis 6-9"), "era" (short phrase like "The Patriarchs" or "The Judges"), "summary" (one engaging sentence, under 25 words).`,
-    detailInstruction: (item) => `Write the full entry for the Old Testament story titled "${item.title}" (${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
-"content": an array of 3 paragraphs (each 80-160 words) telling the story in an engaging narrative-nonfiction style,
-"tags": an array of 3 short lowercase theme tags (1-2 words each).`
+  detailInstruction: (item) => `Write the full profile for the Bible character "${item.name}" (${item.title}, ${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
+"bio": a 3-5 sentence biography covering who they were and what they're known for,
+"qualities": an array of 4 short phrases describing their personality/character traits (can include flaws, not just virtues),
+"quotes": an array of 1-2 objects, each with keys "text" (the quote itself, plain text, no quotation marks around it) and "reference" (e.g. "John 3:16"),
+"keyMoments": an array of 1-2 short phrases naming pivotal moments in their story (plain text, not links).`
   },
   nt: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that explores New Testament stories and happenings, not standard chapter-by-chapter reading. You write in an engaging, human, narrative-nonfiction style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
