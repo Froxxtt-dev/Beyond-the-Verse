@@ -96,15 +96,15 @@ function parseJsonLoose(text) {
 }
 
 async function generateJson(systemPrompt, userPrompt, opts = {}) {
-  const callOpts = { ...opts, jsonMode: true };
+  const baseTemp = opts.temperature ?? 0.85;
   try {
-    const raw = await groqChat(systemPrompt, userPrompt, callOpts);
+    const raw = await groqChat(systemPrompt, userPrompt, { ...opts, temperature: Math.min(baseTemp, 0.7), jsonMode: true });
     return parseJsonLoose(raw);
   } catch (firstErr) {
-    const retryPrompt = userPrompt + `
+    const fallbackPrompt = userPrompt + `
 
-Your previous attempt failed (${firstErr.message}). Try again with a simpler structure: keep every string value plain text with no nested quotation marks, no line breaks inside strings, and no double-quote characters inside any string value.`;
-    const raw2 = await groqChat(systemPrompt, retryPrompt, callOpts);
+Respond with valid JSON only — no markdown fences, no commentary before or after. Keep every string value plain text with no nested quotation marks and no double-quote characters inside any string value — use single quotes for dialogue instead.`;
+    const raw2 = await groqChat(systemPrompt, fallbackPrompt, { ...opts, temperature: Math.min(baseTemp, 0.7), jsonMode: false });
     return parseJsonLoose(raw2);
   }
 }
