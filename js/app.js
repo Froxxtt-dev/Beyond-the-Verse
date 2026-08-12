@@ -341,9 +341,12 @@ function renderCharacterDetail(item) {
     wrap.appendChild(ul);
   }
 
-  if (item.quotes && item.quotes.length) {
+ if (item.quotes && item.quotes.length) {
     wrap.appendChild(el("div", "section-label", "Notable Words"));
-    item.quotes.forEach((q) => wrap.appendChild(el("div", "quote-block", escapeHtml(q))));
+    item.quotes.forEach((q) => {
+      const text = typeof q === "string" ? q : `"${q.text}"${q.reference ? " (" + q.reference + ")" : ""}`;
+      wrap.appendChild(el("div", "quote-block", escapeHtml(text)));
+    });
   }
 
   if (item.keyMoments && item.keyMoments.length) {
