@@ -31,6 +31,7 @@ self.addEventListener("activate", (event) => {
 // Never cache calls to the Groq API — those must always go live.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+  if (url.protocol !== "http:" && url.protocol !== "https:") return; 
   if (url.origin.includes("groq.com")) return;
   if (event.request.method !== "GET") return;
 
