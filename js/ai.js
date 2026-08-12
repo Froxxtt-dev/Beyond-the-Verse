@@ -38,9 +38,20 @@ function addSeenTitles(section, titles) {
 }
 
 // ---------- Core Groq call ----------
-async function groqChat(systemPrompt, userPrompt, { temperature = 0.85, maxTokens = 1400 } = {}) {
+async function groqChat(systemPrompt, userPrompt, { temperature = 0.85, maxTokens = 1400, jsonMode = false } = {}) {
   const key = getApiKey();
   if (!key) throw new Error("No API key set");
+
+  const body = {
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature,
+    max_tokens: maxTokens
+  };
+  if (jsonMode) body.response_format = { type: "json_object" };
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -48,15 +59,7 @@ async function groqChat(systemPrompt, userPrompt, { temperature = 0.85, maxToken
       "Content-Type": "application/json",
       "Authorization": `Bearer ${key}`
     },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature,
-      max_tokens: maxTokens
-    })
+    body: JSON.stringify(body)
   });
 
   if (!res.ok) {
@@ -92,15 +95,16 @@ function parseJsonLoose(text) {
   }
 }
 
-async function generateJson(systemPrompt, userPrompt, opts) {
-  let raw = await groqChat(systemPrompt, userPrompt, opts);
+async function generateJson(systemPrompt, userPrompt, opts = {}) {
+  const callOpts = { ...opts, jsonMode: true };
+  let raw = await groqChat(systemPrompt, userPrompt, callOpts);
   try {
     return parseJsonLoose(raw);
   } catch (firstErr) {
     const retryPrompt = userPrompt + `
 
 Your previous response was not valid JSON (${firstErr.message}). Respond again with corrected valid JSON only. Critical: never use a double-quote character inside any string value — use single quotes for any quoted speech or dialogue instead.`;
-    raw = await groqChat(systemPrompt, retryPrompt, opts);
+    raw = await groqChat(systemPrompt, retryPrompt, callOpts);
     return parseJsonLoose(raw);
   }
 }
@@ -114,7 +118,7 @@ const SECTION_PROMPTS = {
   ot: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that explores Old Testament stories and happenings, not standard chapter-by-chapter reading. You write in an engaging, human, narrative-nonfiction style, similar to a well-researched storyteller. Be historically and textually grounded; note real scholarly or interpretive disputes briefly where relevant rather than presenting one view as settled. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct Old Testament stories or happenings (can be well-known or more obscure) suitable for a "story teaser" list. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each with keys: "title" (string), "reference" (real book/chapter, e.g. "Genesis 6-9"), "era" (short phrase like "The Patriarchs" or "The Judges"), "summary" (one engaging sentence, under 25 words).`,
+Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter, e.g. "Genesis 6-9"), "era" (short phrase like "The Patriarchs" or "The Judges"), "summary" (one engaging sentence, under 25 words).`,
     detailInstruction: (item) => `Write the full entry for the Old Testament story titled "${item.title}" (${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
 "content": an array of 3 paragraphs (each 80-160 words) telling the story in an engaging narrative-nonfiction style,
 "tags": an array of 3 short lowercase theme tags (1-2 words each).`
@@ -122,7 +126,7 @@ Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each
   nt: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that explores New Testament stories and happenings, not standard chapter-by-chapter reading. You write in an engaging, human, narrative-nonfiction style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct New Testament stories or happenings (Gospels, Acts, or notable events referenced in the Epistles) suitable for a "story teaser" list. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each with keys: "title" (string), "reference" (real book/chapter), "era" (short phrase like "The Gospels" or "The Early Church"), "summary" (one engaging sentence, under 25 words).`,
+Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter), "era" (short phrase like "The Gospels" or "The Early Church"), "summary" (one engaging sentence, under 25 words).`,
     detailInstruction: (item) => `Write the full entry for the New Testament story titled "${item.title}" (${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
 "content": an array of 3 paragraphs (each 80-160 words) telling the story in an engaging narrative-nonfiction style,
 "tags": an array of 3 short lowercase theme tags (1-2 words each).`
@@ -130,7 +134,7 @@ Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each
   characters: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that profiles Bible characters with real depth, not just a name and a title. You write in an engaging, human style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference or quote. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct Bible characters (Old or New Testament, well-known or more obscure) suitable for a profile list. Avoid these already-shown names: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each with keys: "name" (string), "title" (a short evocative epithet, e.g. "The Shepherd King"), "reference" (real book range), "era" (short phrase), "bio" (one teaser sentence, under 25 words).`,
+Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "name" (string), "title" (a short evocative epithet, e.g. "The Shepherd King"), "reference" (real book range), "era" (short phrase), "bio" (one teaser sentence, under 25 words).`,
     detailInstruction: (item) => `Write the full profile for the Bible character "${item.name}" (${item.title}, ${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
 "bio": a 3-5 sentence biography covering who they were and what they're known for,
 "qualities": an array of 4 short phrases describing their personality/character traits (can include flaws, not just virtues),
@@ -140,7 +144,7 @@ Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each
   backstories: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that surfaces lesser-known, strange, or debated backstories and details from the Bible, the kind of thing most readers skim past. You write in an engaging, curious, human style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct "interesting backstory" entries: strange, obscure, or debated details, objects, side-characters, or passages in the Bible that reward a closer look. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond ONLY with a JSON array, no markdown fences, of exactly ${n} objects each with keys: "title" (string), "reference" (real book/chapter), "hook" (one intriguing teaser sentence, under 25 words, framed as why this is worth reading).`,
+Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter), "hook" (one intriguing teaser sentence, under 25 words, framed as why this is worth reading).`,
     detailInstruction: (item) => `Write the full entry for the backstory titled "${item.title}" (${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
 "content": an array of 3 paragraphs (each 80-160 words) explaining the backstory in an engaging, curious style, including any real scholarly debate about it.`
   }
@@ -152,9 +156,10 @@ async function generateBatch(section, count = 8) {
   const exclude = getSeenTitles(section);
   const userPrompt = cfg.batchInstruction(count, exclude);
   const parsed = await generateJson(cfg.system, userPrompt, { temperature: 0.95, maxTokens: 900 });
-  if (!Array.isArray(parsed)) throw new Error("Unexpected batch format");
+  const list = Array.isArray(parsed) ? parsed : parsed.items;
+  if (!Array.isArray(list)) throw new Error("Unexpected batch format");
 
-  const items = parsed.map((obj) => {
+  const items = list.map((obj) => {
     const label = obj.title || obj.name;
     return { ...obj, id: slugify(label) + "-" + Math.random().toString(36).slice(2, 7) };
   });
