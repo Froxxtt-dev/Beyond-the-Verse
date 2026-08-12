@@ -7,7 +7,7 @@
 // fixes were deployed). Also switched to network-first below so this
 // class of bug — "fixed the code but the phone kept the old cache" —
 // can't happen again.
-const CACHE_NAME = "beyond-the-verse-v4";
+const CACHE_NAME = "beyond-the-verse-v5";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
