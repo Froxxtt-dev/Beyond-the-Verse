@@ -1,7 +1,13 @@
 // This app shell installs offline, but all story/character content is
 // generated live via the Groq API on each visit, so it always needs a
 // connection. The service worker only caches the shell, not content.
-const CACHE_NAME = "beyond-the-verse-v2";
+//
+// v3: bumped to force existing installs to purge whatever they cached
+// under v2 (this is what was silently serving stale js/ai.js after
+// fixes were deployed). Also switched to network-first below so this
+// class of bug — "fixed the code but the phone kept the old cache" —
+// can't happen again.
+const CACHE_NAME = "beyond-the-verse-v3";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -28,27 +34,26 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Never cache calls to the Groq API — those must always go live.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.protocol !== "http:" && url.protocol !== "https:") return; 
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
   if (url.origin.includes("groq.com")) return;
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === "basic") {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => {
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === "basic") {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
           if (event.request.mode === "navigate") return caches.match("./index.html");
-        });
-    })
+        })
+      )
   );
 });
