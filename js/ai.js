@@ -118,37 +118,38 @@ const SECTION_PROMPTS = {
   ot: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that explores Old Testament stories and happenings, not standard chapter-by-chapter reading. You write in an engaging, human, narrative-nonfiction style, similar to a well-researched storyteller. Be historically and textually grounded; note real scholarly or interpretive disputes briefly where relevant rather than presenting one view as settled. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct Old Testament stories or happenings (can be well-known or more obscure) suitable for a "story teaser" list. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter, e.g. "Genesis 6-9"), "era" (short phrase like "The Patriarchs" or "The Judges"), "summary" (one engaging sentence, under 25 words).`,
-  detailInstruction: (item) => `Write the full profile for the Bible character "${item.name}" (${item.title}, ${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
-"bio": a 3-5 sentence biography covering who they were and what they're known for,
-"qualities": an array of 4 short phrases describing their personality/character traits (can include flaws, not just virtues),
-"quotes": an array of 1-2 objects, each with keys "text" (the quote itself, plain text, no quotation marks around it) and "reference" (e.g. "John 3:16"),
-"keyMoments": an array of 1-2 short phrases naming pivotal moments in their story (plain text, not links).`
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown, and repeat the object ${n} times inside the array):
+{"items": [{"title": "TITLE HERE", "reference": "Genesis 6-9", "era": "SHORT ERA PHRASE", "summary": "ONE ENGAGING SENTENCE UNDER 25 WORDS"}]}`,
+    detailInstruction: (item) => `Write the full entry for the Old Testament story titled "${item.title}" (${item.reference}).
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown):
+{"content": ["PARAGRAPH ONE, 80-160 WORDS", "PARAGRAPH TWO, 80-160 WORDS", "PARAGRAPH THREE, 80-160 WORDS"], "tags": ["TAG ONE", "TAG TWO", "TAG THREE"]}`
   },
   nt: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that explores New Testament stories and happenings, not standard chapter-by-chapter reading. You write in an engaging, human, narrative-nonfiction style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct New Testament stories or happenings (Gospels, Acts, or notable events referenced in the Epistles) suitable for a "story teaser" list. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter), "era" (short phrase like "The Gospels" or "The Early Church"), "summary" (one engaging sentence, under 25 words).`,
-    detailInstruction: (item) => `Write the full entry for the New Testament story titled "${item.title}" (${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
-"content": an array of 3 paragraphs (each 80-160 words) telling the story in an engaging narrative-nonfiction style,
-"tags": an array of 3 short lowercase theme tags (1-2 words each).`
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown, and repeat the object ${n} times inside the array):
+{"items": [{"title": "TITLE HERE", "reference": "Acts 9:1-19", "era": "SHORT ERA PHRASE", "summary": "ONE ENGAGING SENTENCE UNDER 25 WORDS"}]}`,
+    detailInstruction: (item) => `Write the full entry for the New Testament story titled "${item.title}" (${item.reference}).
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown):
+{"content": ["PARAGRAPH ONE, 80-160 WORDS", "PARAGRAPH TWO, 80-160 WORDS", "PARAGRAPH THREE, 80-160 WORDS"], "tags": ["TAG ONE", "TAG TWO", "TAG THREE"]}`
   },
   characters: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that profiles Bible characters with real depth, not just a name and a title. You write in an engaging, human style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference or quote. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct Bible characters (Old or New Testament, well-known or more obscure) suitable for a profile list. Avoid these already-shown names: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "name" (string), "title" (a short evocative epithet, e.g. "The Shepherd King"), "reference" (real book range), "era" (short phrase), "bio" (one teaser sentence, under 25 words).`,
-    detailInstruction: (item) => `Write the full profile for the Bible character "${item.name}" (${item.title}, ${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
-"bio": a 3-5 sentence biography covering who they were and what they're known for,
-"qualities": an array of 4 short phrases describing their personality/character traits (can include flaws, not just virtues),
-"quotes": an array of 1-2 real or closely-paraphrased quotes attributed to them with a reference in parentheses, formatted like "\\"quote text\\" (Book 1:1)",
-"keyMoments": an array of 1-2 short phrases naming pivotal moments in their story (plain text, not links).`
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown, and repeat the object ${n} times inside the array):
+{"items": [{"name": "NAME HERE", "title": "SHORT EVOCATIVE EPITHET", "reference": "1 Samuel 16 - 1 Kings 2", "era": "SHORT ERA PHRASE", "bio": "ONE TEASER SENTENCE UNDER 25 WORDS"}]}`,
+    detailInstruction: (item) => `Write the full profile for the Bible character "${item.name}" (${item.title}, ${item.reference}).
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark exactly as shown, including the quotes around "text" and "reference" inside the quotes array):
+{"bio": "3 TO 5 SENTENCE BIOGRAPHY OF WHO THEY WERE AND WHAT THEY ARE KNOWN FOR", "qualities": ["TRAIT ONE", "TRAIT TWO", "TRAIT THREE", "TRAIT FOUR"], "quotes": [{"text": "THE QUOTE ITSELF, NO QUOTE MARKS AROUND IT", "reference": "John 3:16"}], "keyMoments": ["MOMENT ONE", "MOMENT TWO"]}`
   },
   backstories: {
     system: `You are a Bible content generator for an app called "Beyond the Verse" that surfaces lesser-known, strange, or debated backstories and details from the Bible, the kind of thing most readers skim past. You write in an engaging, curious, human style. Be textually grounded; note real scholarly or interpretive disputes briefly where relevant. Never fabricate a chapter/verse reference. Formatting rule: inside any JSON string value, use single quotes (') for dialogue or quoted speech, never double quotes — a double quote inside a string breaks JSON parsing.`,
     batchInstruction: (n, exclude) => `Generate ${n} distinct "interesting backstory" entries: strange, obscure, or debated details, objects, side-characters, or passages in the Bible that reward a closer look. Avoid these already-shown titles: ${exclude.length ? exclude.join("; ") : "none"}.
-Respond as a JSON object with a single key "items", whose value is an array of exactly ${n} objects, no markdown fences. Each object has keys: "title" (string), "reference" (real book/chapter), "hook" (one intriguing teaser sentence, under 25 words, framed as why this is worth reading).`,
-    detailInstruction: (item) => `Write the full entry for the backstory titled "${item.title}" (${item.reference}). Respond ONLY with a JSON object, no markdown fences, with keys:
-"content": an array of 3 paragraphs (each 80-160 words) explaining the backstory in an engaging, curious style, including any real scholarly debate about it.`
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown, and repeat the object ${n} times inside the array):
+{"items": [{"title": "TITLE HERE", "reference": "Numbers 22:21-35", "hook": "ONE INTRIGUING TEASER SENTENCE UNDER 25 WORDS"}]}`,
+    detailInstruction: (item) => `Write the full entry for the backstory titled "${item.title}" (${item.reference}).
+Respond with valid JSON only, no markdown fences, no commentary, matching exactly this shape (this is a literal template — replace each CAPS placeholder with real text, keep every quotation mark shown):
+{"content": ["PARAGRAPH ONE, 80-160 WORDS", "PARAGRAPH TWO, 80-160 WORDS", "PARAGRAPH THREE, 80-160 WORDS"]}`
   }
 };
 
